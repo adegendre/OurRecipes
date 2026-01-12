@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+const { useState, useEffect, useRef } = React;
 
 // Tag definitions
 const TAG_CATEGORIES = {
@@ -413,7 +413,7 @@ const SAMPLE_RECIPES = [
   }
 ];
 
-export default function FamilyRecipes() {
+function FamilyRecipes() {
   const [recipes, setRecipes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -2049,3 +2049,6 @@ const styles = {
     lineHeight: 1.5,
   },
 };
+
+// Render the app
+ReactDOM.createRoot(document.getElementById('root')).render(<FamilyRecipes />);
