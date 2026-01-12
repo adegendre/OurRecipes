@@ -1,0 +1,37 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.com
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Claude Code
+.claude/
+
+# Backup files
+*-backup.jsx
+*.bak
+
+# Development files
+enhanced-parser.js
+recipe-app-enhanced.jsx
+
+# RTF source file (optional - uncomment if you don't want to include it)
+# our_recipes.rtf
