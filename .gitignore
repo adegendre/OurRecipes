@@ -37,4 +37,4 @@ recipe-app-enhanced.jsx
 firebase-config.js
 
 # RTF source file (optional - uncomment if you don't want to include it)
-# our_recipes.rtf
+our_recipes.rtf
