@@ -1,5 +1,8 @@
 const { useState, useEffect, useRef } = React;
 
+// Firebase auth and database are available from firebase-config.js
+// auth and db are global variables
+
 // Tag definitions
 const TAG_CATEGORIES = {
   type: {
@@ -413,7 +416,149 @@ const SAMPLE_RECIPES = [
   }
 ];
 
-function FamilyRecipes() {
+// Authentication Component
+function AuthScreen({ onAuthSuccess, onClose }) {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await auth.signInWithEmailAndPassword(email, password);
+      } else {
+        await auth.createUserWithEmailAndPassword(email, password);
+      }
+      onAuthSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={authStyles.container}>
+      <div style={authStyles.card}>
+        {onClose && (
+          <button onClick={onClose} style={authStyles.closeButton}>×</button>
+        )}
+        <div style={authStyles.header}>
+          <span style={authStyles.icon}>🍳</span>
+          <h1 style={authStyles.title}>Our Recipes</h1>
+          <p style={authStyles.subtitle}>Family Recipe Collection</p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={authStyles.form}>
+          <h2 style={authStyles.formTitle}>
+            {isLogin ? 'Sign In' : 'Create Account'}
+          </h2>
+
+          {error && <div style={authStyles.error}>{error}</div>}
+
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={authStyles.input}
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength="6"
+            style={authStyles.input}
+          />
+
+          <button type="submit" disabled={loading} style={authStyles.button}>
+            {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+          </button>
+
+          <p style={authStyles.toggleText}>
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+              }}
+              style={authStyles.toggleButton}
+            >
+              {isLogin ? 'Create one' : 'Sign in'}
+            </button>
+          </p>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Main App with Authentication
+function AppWithAuth() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUser(user);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  };
+
+  const handleAuthSuccess = () => {
+    setUser(auth.currentUser);
+    setShowAuthModal(false);
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <FamilyRecipes
+        user={user}
+        onSignOut={handleSignOut}
+        onRequestAuth={() => setShowAuthModal(true)}
+      />
+      {showAuthModal && (
+        <div style={authStyles.modalOverlay} onClick={() => setShowAuthModal(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <AuthScreen onAuthSuccess={handleAuthSuccess} onClose={() => setShowAuthModal(false)} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
   const [recipes, setRecipes] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -462,25 +607,31 @@ function FamilyRecipes() {
 
   const loadRecipes = async () => {
     try {
-      const result = await window.storage.get('family-recipes');
-      if (result && result.value) {
-        setRecipes(JSON.parse(result.value));
+      const snapshot = await db.collection('recipes').orderBy('title').get();
+      if (!snapshot.empty) {
+        const loadedRecipes = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setRecipes(loadedRecipes);
       } else {
+        // If no recipes exist, load sample recipes
         setRecipes(SAMPLE_RECIPES);
-        await window.storage.set('family-recipes', JSON.stringify(SAMPLE_RECIPES));
+        // Optionally save sample recipes to Firestore
+        for (const recipe of SAMPLE_RECIPES) {
+          await db.collection('recipes').add(recipe);
+        }
       }
     } catch (e) {
-      setRecipes(SAMPLE_RECIPES);
+      console.error('Error loading recipes:', e);
+      setRecipes([]);
     }
   };
 
   const saveRecipes = async (updatedRecipes) => {
     setRecipes(updatedRecipes);
-    try {
-      await window.storage.set('family-recipes', JSON.stringify(updatedRecipes));
-    } catch (e) {
-      console.log('Storage not available');
-    }
+    // Firestore saves happen in individual operations (add, update, delete)
+    // This function now just updates local state
   };
 
   const categories = ['All', ...new Set(recipes.map(r => r.category))];
@@ -528,28 +679,50 @@ function FamilyRecipes() {
   };
 
   const handleAddRecipe = async () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
     if (!newRecipe.title.trim()) return;
-    
+
     const recipe = {
-      id: Date.now(),
       title: newRecipe.title,
       category: newRecipe.category,
       ingredients: newRecipe.ingredients.split(',').map(i => i.trim()).filter(i => i),
       instructions: newRecipe.instructions,
       notes: newRecipe.notes,
-      tags: newRecipe.tags
+      tags: newRecipe.tags,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy: user.uid
     };
-    
-    const updatedRecipes = [...recipes, recipe];
-    await saveRecipes(updatedRecipes);
-    setNewRecipe({ title: '', category: 'Main', ingredients: '', instructions: '', notes: '', tags: { type: [], region: [], meal: [], source: [] } });
-    setIsAddingNew(false);
+
+    try {
+      const docRef = await db.collection('recipes').add(recipe);
+      const newRecipeWithId = { ...recipe, id: docRef.id };
+      setRecipes([...recipes, newRecipeWithId]);
+      setNewRecipe({ title: '', category: 'Main', ingredients: '', instructions: '', notes: '', tags: { type: [], region: [], meal: [], source: [] } });
+      setIsAddingNew(false);
+    } catch (error) {
+      console.error('Error adding recipe:', error);
+      alert('Failed to add recipe. Please try again.');
+    }
   };
 
   const handleDeleteRecipe = async (id) => {
-    const updatedRecipes = recipes.filter(r => r.id !== id);
-    await saveRecipes(updatedRecipes);
-    setSelectedRecipe(null);
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
+    try {
+      await db.collection('recipes').doc(id).delete();
+      setRecipes(recipes.filter(r => r.id !== id));
+      setSelectedRecipe(null);
+    } catch (error) {
+      console.error('Error deleting recipe:', error);
+      alert('Failed to delete recipe. Please try again.');
+    }
   };
 
   // Export recipes in selected format
@@ -605,6 +778,12 @@ function FamilyRecipes() {
 
   // Import recipes from file (auto-detects format)
   const handleImport = (event) => {
+    if (!user) {
+      onRequestAuth();
+      event.target.value = '';
+      return;
+    }
+
     const file = event.target.files[0];
     if (!file) return;
 
@@ -625,8 +804,19 @@ function FamilyRecipes() {
         }
         
         if (imported.length > 0) {
-          const merged = [...recipes, ...imported];
-          await saveRecipes(merged);
+          // Add each imported recipe to Firestore
+          const newRecipes = [];
+          for (const recipe of imported) {
+            const recipeData = {
+              ...recipe,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+              createdBy: user.uid
+            };
+            delete recipeData.id; // Remove local ID
+            const docRef = await db.collection('recipes').add(recipeData);
+            newRecipes.push({ ...recipeData, id: docRef.id });
+          }
+          setRecipes([...recipes, ...newRecipes]);
           setImportStatus({ success: true, count: imported.length });
           setTimeout(() => setImportStatus(null), 3000);
         } else {
@@ -647,11 +837,27 @@ function FamilyRecipes() {
   const [pasteText, setPasteText] = useState('');
   
   const handlePasteImport = async () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
     try {
       const imported = formatConverters.parseText(pasteText);
       if (imported.length > 0) {
-        const merged = [...recipes, ...imported];
-        await saveRecipes(merged);
+        // Add each imported recipe to Firestore
+        const newRecipes = [];
+        for (const recipe of imported) {
+          const recipeData = {
+            ...recipe,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: user.uid
+          };
+          delete recipeData.id; // Remove local ID
+          const docRef = await db.collection('recipes').add(recipeData);
+          newRecipes.push({ ...recipeData, id: docRef.id });
+        }
+        setRecipes([...recipes, ...newRecipes]);
         setImportStatus({ success: true, count: imported.length });
         setShowPasteModal(false);
         setPasteText('');
@@ -668,17 +874,64 @@ function FamilyRecipes() {
 
   // Clear all recipes
   const handleClearAll = async () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete ALL recipes? This cannot be undone.')) {
-      await saveRecipes([]);
-      setIsManaging(false);
+      try{
+        // Delete all recipes from Firestore
+        const batch = db.batch();
+        const snapshot = await db.collection('recipes').get();
+        snapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        setRecipes([]);
+        setIsManaging(false);
+      } catch (error) {
+        console.error('Error clearing recipes:', error);
+        alert('Failed to clear recipes. Please try again.');
+      }
     }
   };
 
   // Reset to sample recipes
   const handleResetToSamples = async () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
     if (window.confirm('Reset to sample recipes? Your current recipes will be replaced.')) {
-      await saveRecipes(SAMPLE_RECIPES);
-      setIsManaging(false);
+      try {
+        // Delete all current recipes
+        const batch = db.batch();
+        const snapshot = await db.collection('recipes').get();
+        snapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        // Add sample recipes
+        const newRecipes = [];
+        for (const recipe of SAMPLE_RECIPES) {
+          const recipeData = {
+            ...recipe,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: user.uid
+          };
+          delete recipeData.id;
+          const docRef = await db.collection('recipes').add(recipeData);
+          newRecipes.push({ ...recipeData, id: docRef.id });
+        }
+        setRecipes(newRecipes);
+        setIsManaging(false);
+      } catch (error) {
+        console.error('Error resetting recipes:', error);
+        alert('Failed to reset recipes. Please try again.');
+      }
     }
   };
 
@@ -723,6 +976,11 @@ function FamilyRecipes() {
             <h1 style={styles.title}>Our Family Recipes</h1>
           </div>
           <p style={styles.subtitle}>A collection of love, one dish at a time</p>
+          {user && (
+            <button onClick={onSignOut} style={styles.signOutButton}>
+              Sign Out
+            </button>
+          )}
         </div>
       </header>
 
@@ -2048,7 +2306,140 @@ const styles = {
     marginBottom: '16px',
     lineHeight: 1.5,
   },
+  signOutButton: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    padding: '8px 16px',
+    background: '#6c757d',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+  },
+};
+
+// Authentication styles
+const authStyles = {
+  container: {
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'linear-gradient(180deg, #faf7f2 0%, #f5efe6 100%)',
+    padding: '20px',
+  },
+  card: {
+    background: '#fff',
+    borderRadius: '16px',
+    padding: '40px',
+    maxWidth: '400px',
+    width: '100%',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+  },
+  header: {
+    textAlign: 'center',
+    marginBottom: '32px',
+  },
+  icon: {
+    fontSize: '48px',
+    display: 'block',
+    marginBottom: '16px',
+  },
+  title: {
+    fontFamily: '"Playfair Display", serif',
+    fontSize: '32px',
+    fontWeight: '600',
+    margin: '0 0 8px 0',
+    color: '#2c2416',
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#6b5d4d',
+    margin: 0,
+    fontStyle: 'italic',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+  },
+  formTitle: {
+    fontSize: '20px',
+    fontWeight: '600',
+    color: '#2c2416',
+    margin: '0 0 8px 0',
+    textAlign: 'center',
+  },
+  input: {
+    padding: '12px 16px',
+    fontSize: '15px',
+    border: '2px solid #e0d6c8',
+    borderRadius: '8px',
+    outline: 'none',
+    fontFamily: '"Source Sans 3", sans-serif',
+  },
+  button: {
+    padding: '12px 16px',
+    fontSize: '16px',
+    fontWeight: '600',
+    background: '#6b5d4d',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontFamily: '"Source Sans 3", sans-serif',
+  },
+  error: {
+    padding: '12px',
+    background: '#fee',
+    color: '#c33',
+    borderRadius: '8px',
+    fontSize: '14px',
+    textAlign: 'center',
+  },
+  toggleText: {
+    textAlign: 'center',
+    fontSize: '14px',
+    color: '#6b5d4d',
+    margin: '8px 0 0 0',
+  },
+  toggleButton: {
+    background: 'none',
+    border: 'none',
+    color: '#8b7355',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontFamily: '"Source Sans 3", sans-serif',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: '16px',
+    right: '16px',
+    background: 'none',
+    border: 'none',
+    fontSize: '32px',
+    cursor: 'pointer',
+    color: '#6b5d4d',
+    padding: '4px 8px',
+    lineHeight: 1,
+  },
 };
 
 // Render the app
-ReactDOM.createRoot(document.getElementById('root')).render(<FamilyRecipes />);
+ReactDOM.createRoot(document.getElementById('root')).render(<AppWithAuth />);
