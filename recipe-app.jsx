@@ -1023,15 +1023,27 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
           </div>
           
           <div style={styles.actionButtons}>
-            <button 
-              onClick={() => setIsManaging(true)}
+            <button
+              onClick={() => {
+                if (!user) {
+                  onRequestAuth();
+                } else {
+                  setIsManaging(true);
+                }
+              }}
               style={styles.manageBtn}
               title="Manage recipes"
             >
               ⚙️
             </button>
-            <button 
-              onClick={() => setIsAddingNew(true)}
+            <button
+              onClick={() => {
+                if (!user) {
+                  onRequestAuth();
+                } else {
+                  setIsAddingNew(true);
+                }
+              }}
               style={styles.addBtn}
             >
               + Add Recipe
