@@ -1,6 +1,6 @@
 # Our Recipes
 
-A beautiful, secure web application for managing and sharing your family recipe collection. Browse recipes publicly, but only authenticated users can add, edit, or delete recipes.
+A simple web application for managing and sharing our family recipes. Browse recipes publicly, but only authenticated users can add, edit, or delete recipes.
 
 **Live App:** [https://adegendre.github.io/OurRecipes/](https://adegendre.github.io/OurRecipes/)
 
