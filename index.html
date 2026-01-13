@@ -47,8 +47,25 @@
     <div class="loading">Loading Our Recipes...</div>
   </div>
 
-  <!-- Load Firebase config first -->
-  <script src="firebase-config.js"></script>
+  <!-- Firebase Configuration -->
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDrwJ2NPJNMJL1RrAdJ1BuO3qjU1p88q30",
+      authDomain: "ourrecipes-76451.firebaseapp.com",
+      projectId: "ourrecipes-76451",
+      storageBucket: "ourrecipes-76451.firebasestorage.app",
+      messagingSenderId: "1071085428750",
+      appId: "1:1071085428750:web:d543c0c73b86c573935c5f"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Export Firebase services
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+  </script>
 
   <!-- Load the React app -->
   <script type="text/babel" src="recipe-app.jsx"></script>

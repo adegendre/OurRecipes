@@ -33,5 +33,8 @@ Temporary Items
 enhanced-parser.js
 recipe-app-enhanced.jsx
 
+# Firebase credentials (should not be in git)
+firebase-config.js
+
 # RTF source file (optional - uncomment if you don't want to include it)
 # our_recipes.rtf
