@@ -421,16 +421,44 @@ function AuthScreen({ onAuthSuccess, onClose }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
       await auth.signInWithEmailAndPassword(email, password);
       onAuthSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      await auth.sendPasswordResetEmail(email);
+      setSuccess('Password reset email sent! Check your inbox.');
+      setTimeout(() => {
+        setShowResetPassword(false);
+        setSuccess('');
+      }, 3000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -450,38 +478,85 @@ function AuthScreen({ onAuthSuccess, onClose }) {
           <p style={authStyles.subtitle}>Family Recipe Collection</p>
         </div>
 
-        <form onSubmit={handleSubmit} style={authStyles.form}>
-          <h2 style={authStyles.formTitle}>Sign In</h2>
+        {!showResetPassword ? (
+          <form onSubmit={handleSubmit} style={authStyles.form}>
+            <h2 style={authStyles.formTitle}>Sign In</h2>
 
-          {error && <div style={authStyles.error}>{error}</div>}
+            {error && <div style={authStyles.error}>{error}</div>}
+            {success && <div style={authStyles.success}>{success}</div>}
 
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={authStyles.input}
-          />
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={authStyles.input}
+            />
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength="6"
-            style={authStyles.input}
-          />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength="6"
+              style={authStyles.input}
+            />
 
-          <button type="submit" disabled={loading} style={authStyles.button}>
-            {loading ? 'Please wait...' : 'Sign In'}
-          </button>
+            <button type="submit" disabled={loading} style={authStyles.button}>
+              {loading ? 'Please wait...' : 'Sign In'}
+            </button>
 
-          <p style={authStyles.contactText}>
-            Don't have an account? Contact the administrator to get access.
-          </p>
-        </form>
+            <button
+              type="button"
+              onClick={() => setShowResetPassword(true)}
+              style={authStyles.linkButton}
+            >
+              Forgot password?
+            </button>
+
+            <p style={authStyles.contactText}>
+              Don't have an account? Contact the administrator to get access.
+            </p>
+          </form>
+        ) : (
+          <form onSubmit={handlePasswordReset} style={authStyles.form}>
+            <h2 style={authStyles.formTitle}>Reset Password</h2>
+
+            {error && <div style={authStyles.error}>{error}</div>}
+            {success && <div style={authStyles.success}>{success}</div>}
+
+            <p style={authStyles.resetText}>
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={authStyles.input}
+            />
+
+            <button type="submit" disabled={loading} style={authStyles.button}>
+              {loading ? 'Please wait...' : 'Send Reset Email'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowResetPassword(false);
+                setError('');
+                setSuccess('');
+              }}
+              style={authStyles.linkButton}
+            >
+              Back to sign in
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -2395,12 +2470,38 @@ const authStyles = {
     fontSize: '14px',
     textAlign: 'center',
   },
+  success: {
+    padding: '12px',
+    background: '#efe',
+    color: '#2a7',
+    borderRadius: '8px',
+    fontSize: '14px',
+    textAlign: 'center',
+  },
   contactText: {
     textAlign: 'center',
     fontSize: '13px',
     color: '#6b5d4d',
     margin: '16px 0 0 0',
     fontStyle: 'italic',
+  },
+  resetText: {
+    textAlign: 'center',
+    fontSize: '14px',
+    color: '#6b5d4d',
+    margin: '0 0 16px 0',
+    lineHeight: 1.5,
+  },
+  linkButton: {
+    background: 'none',
+    border: 'none',
+    color: '#8b7355',
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontFamily: '"Source Sans 3", sans-serif',
+    padding: '8px',
+    marginTop: '8px',
   },
   modalOverlay: {
     position: 'fixed',
