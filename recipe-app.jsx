@@ -418,7 +418,6 @@ const SAMPLE_RECIPES = [
 
 // Authentication Component
 function AuthScreen({ onAuthSuccess, onClose }) {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -430,11 +429,7 @@ function AuthScreen({ onAuthSuccess, onClose }) {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await auth.signInWithEmailAndPassword(email, password);
-      } else {
-        await auth.createUserWithEmailAndPassword(email, password);
-      }
+      await auth.signInWithEmailAndPassword(email, password);
       onAuthSuccess();
     } catch (err) {
       setError(err.message);
@@ -456,9 +451,7 @@ function AuthScreen({ onAuthSuccess, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} style={authStyles.form}>
-          <h2 style={authStyles.formTitle}>
-            {isLogin ? 'Sign In' : 'Create Account'}
-          </h2>
+          <h2 style={authStyles.formTitle}>Sign In</h2>
 
           {error && <div style={authStyles.error}>{error}</div>}
 
@@ -482,21 +475,11 @@ function AuthScreen({ onAuthSuccess, onClose }) {
           />
 
           <button type="submit" disabled={loading} style={authStyles.button}>
-            {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
+            {loading ? 'Please wait...' : 'Sign In'}
           </button>
 
-          <p style={authStyles.toggleText}>
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError('');
-              }}
-              style={authStyles.toggleButton}
-            >
-              {isLogin ? 'Create one' : 'Sign in'}
-            </button>
+          <p style={authStyles.contactText}>
+            Don't have an account? Contact the administrator to get access.
           </p>
         </form>
       </div>
@@ -2412,20 +2395,12 @@ const authStyles = {
     fontSize: '14px',
     textAlign: 'center',
   },
-  toggleText: {
+  contactText: {
     textAlign: 'center',
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#6b5d4d',
-    margin: '8px 0 0 0',
-  },
-  toggleButton: {
-    background: 'none',
-    border: 'none',
-    color: '#8b7355',
-    textDecoration: 'underline',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontFamily: '"Source Sans 3", sans-serif',
+    margin: '16px 0 0 0',
+    fontStyle: 'italic',
   },
   modalOverlay: {
     position: 'fixed',
