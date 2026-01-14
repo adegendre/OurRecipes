@@ -1,9 +1,10 @@
 [
   {
-    "title": "Easy Pho soup",
-    "category": "Soup",
+    "title": "Easy Vietnamese Pho soup",
+    "category": "Main",
     "ingredients": [
       "1 cube of pho broth",
+      "750ml of boiling water",
       "Thai basil",
       "grated frozen lemongrass",
       "2 Lemon wedges",
@@ -11,14 +12,19 @@
       "Soy bean sprouts",
       "Thick Rice noodles, 100g per bowl"
     ],
-    "instructions": "750ml of boiling water",
+    "instructions":
     "notes": "Makes 2 large bowls",
     "tags": {
-      "type": [],
-      "region": [
-        "Thai/Vietnamese"
+      "type": [
+       "comfort",
+       "quick",	
       ],
-      "meal": [],
+      "region": [
+        "Asia"
+      ],
+      "meal": [
+        "lunch/dinner"
+      ],
       "source": []
     }
   },
@@ -26,10 +32,10 @@
     "title": "Easy Pokawa Poké",
     "category": "Main",
     "ingredients": [
-      "1 base: riz complet, quinoa ou carottes",
-      "Veggies: carottes, edamame, radis, concombre, avocat, chou rouge",
-      "1 fruit: mangue, ananas ou grenade",
-      "1 protéine: chicken breast, jambon, œuf, tofu."
+      "1 base: brown rice, quinoa or carrots",
+      "Veggies: carrot, edamame, radish, cucumber, avocado, red cabbage",
+      "1 fruit: mango, pineapple, pomegranate",
+      "1 protein: chicken breast, ham, egg, tofu."
     ],
     "instructions": "",
     "notes": "",
@@ -43,83 +49,45 @@
     }
   },
   {
-    "title": "Glaces de Loïc",
-    "category": "Dessert",
+    "title": "Healthier cookies",
+    "category": "Dessert", "snack"
     "ingredients": [
-      "500g of fromage blanc with organic almond milk,",
-      "Environ 9g de protéine par glace"
+      "2 tbsp coconut oil",
+      "3 tbsp maple syrup or honey",
+      "2 large eggs",
+      "1 tsp vanilla extract",
+      "2 cups almond flour (or equal wholemeal)",
+      "1/2 tsp baking soda",
+      "1/4 tsp fine-grain sea salt",
+      "chocolate chips or other topping"
     ],
-    "instructions": "3 spoons of Herbalife PDM + 6 spoons of f1 cookies with added dark chocolate chips.",
-    "notes": "",
+    "instructions": "Traditional oven 180C degrees for 10 min",
+    "notes": "https://www.kitchentreaty.com/soft-baked-almond-flour-chocolate-chip-cookies/",
     "tags": {
       "type": [],
-      "region": [],
+      "region": "North America",
       "meal": [
+        "brekkie",
+        "snack",
         "dessert"
       ],
-      "source": []
+      "source": ["Other"]
     }
   },
   {
-    "title": "Low-carb, dairy-free, gluten-free cookies",
-    "category": "Dessert",
-    "ingredients": [
-      "Ingredients",
-      "2 tablespoons solid coconut oil",
-      "3 tablespoons pure maple syrup / honey",
-      "2 large eggs",
-      "1 teaspoon pure vanilla extract",
-      "2 cups almond flour (or equal wholemeal)",
-      "1/2 teaspoon baking soda",
-      "1/4 teaspoon fine-grain sea salt",
-      "chocolate chips or any other topping",
-      "1 cup raspberries fresh or frozen",
-      "1 egg",
-      "3/4 cup plain low-fat Greek yogurt",
-      "1/3 cup sugar",
-      "1 tsp baking powder",
-      "Over temp: 200 degrees, 15-18 min. until golden"
-    ],
-    "instructions": "Oven 180 degrees for 10 min Raspberry Yogurt Oat Breakfast Cookies 1 cup oat bran",
-    "notes": "https://www.kitchentreaty.com/soft-baked-almond-flour-chocolate-chip-cookies/(\"https://www.kitchentreaty.com/soft-baked-almond-flour-chocolate-chip-cookies/\") https://erinpalinski.com/raspberry-yogurt-breakfast-cookie/(\"https://erinpalinski.com/raspberry-yogurt-breakfast-cookie/\")",
-    "tags": {
-      "type": [
-        "keto",
-        "gluten-free",
-        "dairy-free"
-      ],
-      "region": [],
-      "meal": [
-        "breakfast",
-        "dessert"
-      ],
-      "source": []
-    }
-  },
-  {
-    "title": "Low sugar jam",
+    "title": "Low sugar Jam",
     "category": "Sauce/Condiment",
     "ingredients": [
       "160g frozen berries",
       "1 tbsp water",
       "60g sugar (40-70% weight of fruit)",
-      "3 tbsp Lemon juice (1 to 2 Oz per pound of fruit)",
-      "1 tsp chia seeds",
+      "3 tbsp Lemon juice (30-60ml per 0.5kg fruit)",
+      "1 tsp chia seeds (optional)",
       "1 tsp Jamsetta with pectin",
-      "(Optional 1/2 tsp vanilla extract after finished, for taste)",
-      "Store in sealed container in refrigerator for up to 2 weeks, or in freezer for up to 3 months.",
-      "Clafoutis aux Cerises de Cyril Lignac",
-      "400 grammes de cerises préalablement rincées",
-      "4 oeufs",
-      "200 grammes de farine",
-      "150 grammes de sucre",
-      "50 cl de lait",
-      "1 pincée de sel",
-      "2 cuillères à soupe de Kirsh (optionnel)",
-      "Tarte Amandine"
+      "1/2 tsp vanilla extract after finished (optional)"
     ],
-    "instructions": "Instructions: Add frozen berries, sweetener, lemon juice and water into small saucepan. Bring to a boil then reduce heat to simmer. Stir in chia seeds and simmer for about 15 minutes or until thickened; stirring often. Remove from heat and add vanilla. Allow to cool. Préchauffer le four à 180C. Mélanger d’abord les œufs avec le sucre jusqu’à mélange homogène. Ajouter la moitié de la farine tamisée (attention aux grumeaux!), le sel et la moitié du lait et bien mélanger. Ajouter ensuite la seconde moitié de la farine et du lait et bien mélanger. Dans un plat bien beurré, mettre les cerises dénoyautées et la pâte. Enfourner pour 30-35 min.",
-    "notes": "Great blog Article on jam making : https://www.seriouseats.com/jam-making-101-pectin-sugar-gel-point#toc-next-guesstimate-your-sugar(\"https://www.seriouseats.com/jam-making-101-pectin-sugar-gel-point#toc-next-guesstimate-your-sugar\") https://liliebakery.fr/tarte-poire-amandine-bourdaloue/",
+    "instructions": "Add frozen berries, sugar, lemon juice and water into small saucepan. Bring to a boil then reduce heat to simmer. Stir in chia seeds and simmer for about 15 minutes or until thickened; stirring often. Remove from heat and add vanilla. Allow to cool.",
+    "notes": ""Store in sealed container in refrigerator for up to 2 weeks, or in freezer for up to 3 months. Great blog Article on jam making : https://www.seriouseats.com/jam-making-101-pectin-sugar-gel-point#toc-next-guesstimate-your-sugar",
     "tags": {
       "type": [],
       "region": [
@@ -129,7 +97,12 @@
       "meal": [],
       "source": []
     }
-  },
+  }
+
+
+
+
+,
   {
     "title": "Vicky’s waffles",
     "category": "Dessert",

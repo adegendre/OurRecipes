@@ -7,24 +7,45 @@ const { useState, useEffect, useRef } = React;
 const TAG_CATEGORIES = {
   type: {
     label: 'Type',
-    icon: '🍴',
+    icon: '',
     options: ['spicy', 'comfort', 'quick', 'few ingredients', 'overnight', 'salad', 'slow-cooking', 'oven', 'barbecue', 'big crowd']
   },
   region: {
     label: 'Region',
-    icon: '🌍',
+    icon: '',
     options: ['Asia', 'France', 'Latin America', 'North America', 'Italy', 'Middle East', 'Other']
   },
   meal: {
     label: 'Meal',
-    icon: '🕐',
+    icon: '',
     options: ['brekkie', 'lunch/dinner', 'snack', 'dessert']
   },
   source: {
     label: 'Source',
-    icon: '📚',
+    icon: '',
     options: ['Ottolenghi', 'Jamie Oliver', 'family', 'Other']
   }
+};
+
+// Helper to convert URLs in text to clickable links
+const linkifyText = (text) => {
+  if (!text) return text;
+
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      return React.createElement('a', {
+        key: index,
+        href: part,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        style: { color: '#8b7355', textDecoration: 'underline' }
+      }, part);
+    }
+    return part;
+  });
 };
 
 // Helper to find similar recipes based on shared ingredients
@@ -147,14 +168,28 @@ ${r.notes ? `\n> 💡 *${r.notes}*` : ''}
   parseText: (text) => {
     const recipes = [];
 
-    // Normalize line endings
+    // Normalize line endings and clean up
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-    // Split into recipe blocks
-    // Look for: double empty lines, horizontal rules (===, ---), or markdown headers (##)
-    const blocks = text.split(/\n{2,}(?=[A-Z])|(?:^|\n)={3,}|(?:^|\n)-{3,}|(?:^|\n)#{1,2}\s+/)
-      .map(b => b.trim())
-      .filter(b => b.length > 50); // Skip very short blocks
+    // Remove excessive whitespace but preserve structure
+    text = text.replace(/\n{4,}/g, '\n\n\n');
+
+    // Try to split by common recipe separators
+    // 1. Look for repeated separator characters (===, ---, ***)
+    let blocks = text.split(/\n\s*[=\-*]{5,}\s*\n/);
+
+    // 2. If that doesn't work, try splitting by double newlines before capitalized titles
+    if (blocks.length === 1) {
+      blocks = text.split(/\n\n+(?=[A-Z][A-Za-z\s]{3,50}(?:\n|$))/);
+    }
+
+    // 3. If still one block, try markdown headers
+    if (blocks.length === 1) {
+      blocks = text.split(/(?:^|\n)#{1,3}\s+/);
+    }
+
+    // Filter and parse blocks
+    blocks = blocks.map(b => b.trim()).filter(b => b.length > 30);
 
     for (const block of blocks) {
       const recipe = parseRecipeBlock(block);
@@ -174,6 +209,7 @@ ${r.notes ? `\n> 💡 *${r.notes}*` : ''}
       id: Date.now() + Math.random(),
       title: r.title || 'Untitled Recipe',
       category: r.category || 'Main',
+      servings: r.servings || '',
       ingredients: Array.isArray(r.ingredients) ? r.ingredients : (r.ingredients || '').split(',').map(i => i.trim()),
       instructions: r.instructions || '',
       notes: r.notes || '',
@@ -189,6 +225,7 @@ function parseRecipeBlock(block) {
 
   let title = '';
   let category = 'Main';
+  let servings = '';
   let ingredients = [];
   let instructions = '';
   let notes = '';
@@ -240,6 +277,20 @@ function parseRecipeBlock(block) {
     }
   }
 
+  // === SERVINGS EXTRACTION ===
+  const servingsPatterns = [
+    /(?:serves?|servings?|makes?|yields?)[:\s]+([^\n]+)/i,
+    /(?:for|feeds?)[:\s]+(\d+\s*(?:people|persons?|servings?))/i
+  ];
+
+  for (const pattern of servingsPatterns) {
+    const match = block.match(pattern);
+    if (match) {
+      servings = match[1].trim();
+      break;
+    }
+  }
+
   // === TAG EXTRACTION ===
   Object.keys(TAG_CATEGORIES).forEach(tagCat => {
     const explicitMatch = block.match(new RegExp(`${tagCat}[:\\s]+([^\n]+)`, 'i'));
@@ -261,14 +312,19 @@ function parseRecipeBlock(block) {
   });
 
   // === INGREDIENTS EXTRACTION ===
-  let ingMatch = block.match(/ingredients?[:\s]*\n([\s\S]*?)(?=\n(?:instructions?|directions?|steps?|method|preparation|notes?|tips?)|$)/i);
+  let ingMatch = block.match(/ingredients?[:\s]*\n+([\s\S]*?)(?=\n\s*(?:instructions?|directions?|steps?|method|preparation|notes?|tips?|serves?|makes?)\s*[:|\n]|$)/i);
 
   if (!ingMatch) {
-    ingMatch = block.match(/you(?:'ll| will) need[:\s]*\n([\s\S]*?)(?=\n(?:instructions?|directions?|steps?|method|preparation|notes?|tips?)|$)/i);
+    ingMatch = block.match(/you(?:'ll| will) need[:\s]*\n+([\s\S]*?)(?=\n\s*(?:instructions?|directions?|steps?|method|preparation|notes?|tips?)\s*[:|\n]|$)/i);
   }
 
   if (!ingMatch) {
-    const listMatch = block.match(/((?:^|\n)[\s\-•*◦○▪▫●\d.]+[^\n]+)+(?=\n(?:instructions?|directions?|steps?|method|preparation))/im);
+    ingMatch = block.match(/what you need[:\s]*\n+([\s\S]*?)(?=\n\s*(?:instructions?|directions?|steps?|method|preparation|notes?|tips?)\s*[:|\n]|$)/i);
+  }
+
+  // Try to find a list of items before "instructions" or similar
+  if (!ingMatch) {
+    const listMatch = block.match(/((?:^|\n)[\s\-•*◦○▪▫●➤➢▸►▹][\s]*[^\n]+)+(?=\n\s*(?:instructions?|directions?|steps?|method|preparation)\s*[:|\n])/im);
     if (listMatch) {
       ingMatch = [null, listMatch[0]];
     }
@@ -279,32 +335,59 @@ function parseRecipeBlock(block) {
       .split('\n')
       .map(line => {
         return line
-          .replace(/^[\s\-•*◦○▪▫●\d.)\]]+/, '')
-          .replace(/^[\d]+\s*[\/.\s*[\d]+/, '')
+          .replace(/^[\s\-•*◦○▪▫●➤➢▸►▹\d.)\]]+/, '')
+          .replace(/^[\d]+\s*[\/.\s]*[\d]*/, '')
           .trim();
       })
       .filter(line => {
-        return line.length > 0 &&
-               line.length < 150 &&
-               !line.toLowerCase().match(/^(ingredients?|you('ll| will) need|for the|topping)$/);
+        const lower = line.toLowerCase();
+        return line.length > 1 &&
+               line.length < 200 &&
+               !lower.match(/^(ingredients?|you('ll| will) need|for the|topping|what you need)[:]*$/);
       });
   }
 
   // === INSTRUCTIONS EXTRACTION ===
   const instrPatterns = [
-    /(?:instructions?|directions?|steps?|method|preparation)[:\s]*\n?([\s\S]*?)(?=\n(?:notes?|tips?|chef'?s? notes?)|$)/i,
-    /(?:how to make|to prepare)[:\s]*\n?([\s\S]*?)(?=\n(?:notes?|tips?)|$)/i
+    /(?:instructions?|directions?|steps?|method|preparation)[:\s]*\n+([\s\S]*?)(?=\n\s*(?:notes?|tips?|chef'?s? notes?|serves?|makes?)\s*[:|\n]|$)/i,
+    /(?:how to make|to prepare|what to do)[:\s]*\n+([\s\S]*?)(?=\n\s*(?:notes?|tips?|serves?|makes?)\s*[:|\n]|$)/i
   ];
 
   for (const pattern of instrPatterns) {
     const match = block.match(pattern);
     if (match) {
       instructions = match[1]
-        .replace(/\n+/g, ' ')
+        .split(/\n+/)
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join(' ')
         .replace(/\s+/g, ' ')
-        .replace(/^\d+\.\s*/gm, '')
+        .replace(/^\d+[\.\)]\s*/g, '')
         .trim();
       break;
+    }
+  }
+
+  // If no instructions found but we have ingredients, try to grab remaining text
+  if (!instructions && ingredients.length > 0) {
+    const afterIngredients = block.split(/ingredients?[:\s]*\n/i)[1];
+    if (afterIngredients) {
+      const lines = afterIngredients.split('\n');
+      let foundEnd = false;
+      const instrLines = [];
+      for (const line of lines) {
+        if (line.trim().match(/^[\s\-•*◦○▪▫●]/)) {
+          // Still in ingredients
+          continue;
+        }
+        if (line.trim().length > 0) {
+          instrLines.push(line.trim());
+          foundEnd = true;
+        }
+      }
+      if (foundEnd && instrLines.length > 0) {
+        instructions = instrLines.join(' ').replace(/\s+/g, ' ').trim();
+      }
     }
   }
 
@@ -328,6 +411,7 @@ function parseRecipeBlock(block) {
       id: Date.now() + Math.random(),
       title,
       category,
+      servings,
       ingredients,
       instructions: instructions || 'No instructions provided',
       notes,
@@ -629,6 +713,8 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
   const [isManaging, setIsManaging] = useState(false);
   const [importStatus, setImportStatus] = useState(null);
   const [exportFormat, setExportFormat] = useState('json');
@@ -636,6 +722,7 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
   const [newRecipe, setNewRecipe] = useState({
     title: '',
     category: 'Main',
+    servings: '',
     ingredients: '',
     instructions: '',
     notes: '',
@@ -747,7 +834,8 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
     const recipe = {
       title: newRecipe.title,
       category: newRecipe.category,
-      ingredients: newRecipe.ingredients.split(',').map(i => i.trim()).filter(i => i),
+      servings: newRecipe.servings,
+      ingredients: newRecipe.ingredients.split('\n').map(i => i.trim()).filter(i => i),
       instructions: newRecipe.instructions,
       notes: newRecipe.notes,
       tags: newRecipe.tags,
@@ -759,7 +847,7 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
       const docRef = await db.collection('recipes').add(recipe);
       const newRecipeWithId = { ...recipe, id: docRef.id };
       setRecipes([...recipes, newRecipeWithId]);
-      setNewRecipe({ title: '', category: 'Main', ingredients: '', instructions: '', notes: '', tags: { type: [], region: [], meal: [], source: [] } });
+      setNewRecipe({ title: '', category: 'Main', servings: '', ingredients: '', instructions: '', notes: '', tags: { type: [], region: [], meal: [], source: [] } });
       setIsAddingNew(false);
     } catch (error) {
       console.error('Error adding recipe:', error);
@@ -773,6 +861,10 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
       return;
     }
 
+    if (!window.confirm('Are you sure you want to delete this recipe?')) {
+      return;
+    }
+
     try {
       await db.collection('recipes').doc(id).delete();
       setRecipes(recipes.filter(r => r.id !== id));
@@ -780,6 +872,62 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
     } catch (error) {
       console.error('Error deleting recipe:', error);
       alert('Failed to delete recipe. Please try again.');
+    }
+  };
+
+  const handleEditRecipe = () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
+    // Populate the form with selected recipe data
+    setNewRecipe({
+      title: selectedRecipe.title,
+      category: selectedRecipe.category,
+      servings: selectedRecipe.servings || '',
+      ingredients: selectedRecipe.ingredients.join('\n'),
+      instructions: selectedRecipe.instructions,
+      notes: selectedRecipe.notes || '',
+      tags: selectedRecipe.tags || { type: [], region: [], meal: [], source: [] }
+    });
+    setEditingRecipeId(selectedRecipe.id);
+    setIsEditing(true);
+    setSelectedRecipe(null);
+  };
+
+  const handleUpdateRecipe = async () => {
+    if (!user) {
+      onRequestAuth();
+      return;
+    }
+
+    if (!newRecipe.title.trim()) return;
+
+    const updatedRecipe = {
+      title: newRecipe.title,
+      category: newRecipe.category,
+      servings: newRecipe.servings,
+      ingredients: newRecipe.ingredients.split('\n').map(i => i.trim()).filter(i => i),
+      instructions: newRecipe.instructions,
+      notes: newRecipe.notes,
+      tags: newRecipe.tags,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    try {
+      await db.collection('recipes').doc(editingRecipeId).update(updatedRecipe);
+      const updatedRecipes = recipes.map(r =>
+        r.id === editingRecipeId ? { ...r, ...updatedRecipe } : r
+      );
+      setRecipes(updatedRecipes);
+
+      setNewRecipe({ title: '', category: 'Main', servings: '', ingredients: '', instructions: '', notes: '', tags: { type: [], region: [], meal: [], source: [] } });
+      setIsEditing(false);
+      setEditingRecipeId(null);
+    } catch (error) {
+      console.error('Error updating recipe:', error);
+      alert('Failed to update recipe. Please try again.');
     }
   };
 
@@ -1033,7 +1181,6 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
             <span style={styles.icon}>🍳</span>
             <h1 style={styles.title}>Our Family Recipes</h1>
           </div>
-          <p style={styles.subtitle}>A collection of love, one dish at a time</p>
           {user && (
             <button onClick={onSignOut} style={styles.signOutButton}>
               Sign Out
@@ -1076,7 +1223,7 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
                 ...(hasActiveFilters ? styles.filterToggleBtnActive : {})
               }}
             >
-              🏷️ Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
+              Filters {activeFilterCount > 0 && `(${activeFilterCount})`}
             </button>
           </div>
           
@@ -1162,7 +1309,6 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
         <div style={styles.recipeGrid}>
           {filteredRecipes.length === 0 ? (
             <div style={styles.emptyState}>
-              <span style={styles.emptyIcon}>📖</span>
               <p style={styles.emptyText}>No recipes found</p>
               <p style={styles.emptySubtext}>Try a different search or add a new recipe!</p>
             </div>
@@ -1244,7 +1390,14 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
                   )}
                 </div>
               )}
-              
+
+              {selectedRecipe.servings && (
+                <div style={styles.modalSection}>
+                  <h4 style={styles.modalLabel}>Servings</h4>
+                  <p style={styles.modalText}>{selectedRecipe.servings}</p>
+                </div>
+              )}
+
               <div style={styles.modalSection}>
                 <h4 style={styles.modalLabel}>Ingredients</h4>
                 <div style={styles.ingredientsList}>
@@ -1256,22 +1409,31 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
               
               <div style={styles.modalSection}>
                 <h4 style={styles.modalLabel}>Instructions</h4>
-                <p style={styles.modalText}>{selectedRecipe.instructions}</p>
+                <p style={styles.modalText}>{linkifyText(selectedRecipe.instructions)}</p>
               </div>
-              
+
               {selectedRecipe.notes && (
                 <div style={styles.notesBox}>
-                  <span style={styles.notesIcon}>💭</span>
-                  <p style={styles.notesText}>{selectedRecipe.notes}</p>
+                  <p style={styles.notesText}>{linkifyText(selectedRecipe.notes)}</p>
                 </div>
               )}
-              
-              <button 
-                onClick={() => handleDeleteRecipe(selectedRecipe.id)}
-                style={styles.deleteBtn}
-              >
-                Remove Recipe
-              </button>
+
+              {user && (
+                <div style={styles.recipeActions}>
+                  <button
+                    onClick={handleEditRecipe}
+                    style={styles.editBtn}
+                  >
+                    Edit Recipe
+                  </button>
+                  <button
+                    onClick={() => handleDeleteRecipe(selectedRecipe.id)}
+                    style={styles.deleteBtn}
+                  >
+                    Remove Recipe
+                  </button>
+                </div>
+              )}
               
               {/* Similar Recipes Section */}
               {similarRecipes.length > 0 && (
@@ -1304,18 +1466,18 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
           </div>
         )}
 
-        {/* Add Recipe Modal */}
-        {isAddingNew && (
-          <div style={styles.modalOverlay} onClick={() => setIsAddingNew(false)}>
+        {/* Add/Edit Recipe Modal */}
+        {(isAddingNew || isEditing) && (
+          <div style={styles.modalOverlay} onClick={() => { setIsAddingNew(false); setIsEditing(false); }}>
             <div style={styles.modal} onClick={e => e.stopPropagation()}>
-              <button 
-                onClick={() => setIsAddingNew(false)}
+              <button
+                onClick={() => { setIsAddingNew(false); setIsEditing(false); }}
                 style={styles.closeBtn}
               >
                 ✕
               </button>
-              
-              <h2 style={styles.modalTitle}>Add New Recipe</h2>
+
+              <h2 style={styles.modalTitle}>{isEditing ? 'Edit Recipe' : 'Add New Recipe'}</h2>
               
               <div style={styles.formGroup}>
                 <label style={styles.formLabel}>Recipe Title</label>
@@ -1344,15 +1506,26 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
                   <option value="Drink">Drink</option>
                 </select>
               </div>
-              
+
               <div style={styles.formGroup}>
-                <label style={styles.formLabel}>Ingredients (comma separated)</label>
+                <label style={styles.formLabel}>Servings (optional)</label>
                 <input
                   type="text"
+                  value={newRecipe.servings}
+                  onChange={(e) => setNewRecipe({...newRecipe, servings: e.target.value})}
+                  placeholder="e.g., 'For 6 people' or 'Makes 20 crepes'"
+                  style={styles.formInput}
+                />
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.formLabel}>Ingredients (one per line)</label>
+                <textarea
                   value={newRecipe.ingredients}
                   onChange={(e) => setNewRecipe({...newRecipe, ingredients: e.target.value})}
-                  placeholder="flour, sugar, butter..."
-                  style={styles.formInput}
+                  placeholder="2 cups flour&#10;1 cup sugar&#10;1/2 cup butter&#10;2 eggs"
+                  style={styles.formTextarea}
+                  rows={6}
                 />
               </div>
               
@@ -1417,11 +1590,11 @@ function FamilyRecipes({ user, onSignOut, onRequestAuth }) {
                 </div>
               </div>
               
-              <button 
-                onClick={handleAddRecipe}
+              <button
+                onClick={isEditing ? handleUpdateRecipe : handleAddRecipe}
                 style={styles.submitBtn}
               >
-                Save Recipe
+                {isEditing ? 'Update Recipe' : 'Save Recipe'}
               </button>
             </div>
           </div>
@@ -1578,8 +1751,7 @@ Notes: Mom's favorite!`}
 
       {/* Footer */}
       <footer style={styles.footer}>
-        <p style={styles.footerText}>Made with love for our family 💕</p>
-        <p style={styles.footerHint}>Tip: Add to Home Screen for the best experience</p>
+        <p style={styles.footerText}>Copyright 2026 Alexandra de Gendre - All rights reserved - Made with Claude Code.</p>
       </footer>
     </div>
   );
@@ -1950,11 +2122,6 @@ const styles = {
     textAlign: 'center',
     padding: '60px 20px',
   },
-  emptyIcon: {
-    fontSize: '48px',
-    display: 'block',
-    marginBottom: '16px',
-  },
   emptyText: {
     fontSize: '18px',
     fontWeight: '500',
@@ -2065,14 +2232,7 @@ const styles = {
     background: '#faf7f2',
     borderRadius: '12px',
     padding: '16px 20px',
-    display: 'flex',
-    gap: '12px',
-    alignItems: 'flex-start',
     marginBottom: '24px',
-  },
-  notesIcon: {
-    fontSize: '18px',
-    flexShrink: 0,
   },
   notesText: {
     fontSize: '14px',
@@ -2081,8 +2241,25 @@ const styles = {
     margin: 0,
     lineHeight: 1.5,
   },
-  deleteBtn: {
+  recipeActions: {
+    display: 'flex',
+    gap: '12px',
     width: '100%',
+  },
+  editBtn: {
+    flex: 1,
+    padding: '12px',
+    fontSize: '14px',
+    border: '2px solid #8b7355',
+    borderRadius: '8px',
+    background: '#8b7355',
+    color: '#fff',
+    cursor: 'pointer',
+    fontFamily: '"Source Sans 3", sans-serif',
+    fontWeight: '500',
+  },
+  deleteBtn: {
+    flex: 1,
     padding: '12px',
     fontSize: '14px',
     border: '1px solid #e0d6c8',
@@ -2221,13 +2398,8 @@ const styles = {
     borderTop: '1px solid rgba(0,0,0,0.04)',
   },
   footerText: {
-    fontSize: '14px',
-    color: '#a89f91',
-    margin: '0 0 4px 0',
-  },
-  footerHint: {
     fontSize: '12px',
-    color: '#c4b8a8',
+    color: '#a89f91',
     margin: 0,
   },
   // Similar recipes styles

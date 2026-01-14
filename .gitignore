@@ -36,5 +36,7 @@ recipe-app-enhanced.jsx
 # Firebase credentials (should not be in git)
 firebase-config.js
 
-# RTF source file (optional - uncomment if you don't want to include it)
+# RTF source file and recipe imports (keep database private)
 our_recipes.rtf
+recipes_import.json
+*.json
